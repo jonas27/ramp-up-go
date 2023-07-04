@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 const (
@@ -13,16 +14,28 @@ const (
 )
 
 func main() {
-	if err := run(os.Args); err != nil {
+	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(exitFail)
 	}
 }
 
-func run(args []string) error {
+func run() error {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	port := flag.String("port", ":8080", "The server port with colon")
 	flag.Parse()
 
+	db := make(map[string]string)
+	s := &server{
+		db: &database{
+			&db,
+		},
+		server: &http.Server{
+			Addr:              *port,
+			ReadHeaderTimeout: 3 * time.Second,
+		},
+	}
+
 	log.Printf("Server running on port %s\n", *port)
-	return http.ListenAndServe(*port, nil)
+	return s.server.ListenAndServe()
 }
