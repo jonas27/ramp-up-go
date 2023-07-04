@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"strings"
 )
 
 type server struct {
@@ -21,13 +20,13 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) handleGet(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/")
-	paths := strings.Split(path, "/")
-	if len(paths) > 1 {
+	ok := checkPath(r.URL.Path)
+	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	value := s.db.get(paths[0])
+	key := r.URL.Query().Get("key")
+	value := s.db.get(key)
 	if value == "" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -37,7 +36,10 @@ func (s *server) handleGet(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error writing response:", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
+}
 
+func checkPath(path string) bool {
+	return path == "/"
 }
 
 func handleNotFound(w http.ResponseWriter) {

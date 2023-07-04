@@ -16,11 +16,11 @@ func TestGet(t *testing.T) {
 		path     string
 		response string
 	}{
-		{name: "test ok", code: http.StatusOK, path: "/test", response: "succeeded"},
-		{name: "wrong value", code: http.StatusNotFound, path: "/not", response: ""},
-		{name: "no value", code: http.StatusNotFound, path: "/", response: ""},
-		{name: "wrong path", code: http.StatusBadRequest, path: "/test/", response: ""},
-		{name: "wrong path 2", code: http.StatusBadRequest, path: "/test/test", response: ""},
+		{name: "test ok", code: http.StatusOK, path: "/?key=test", response: "succeeded"},
+		{name: "wrong value", code: http.StatusNotFound, path: "/?key=not", response: ""},
+		{name: "no value", code: http.StatusNotFound, path: "/?key=", response: ""},
+		{name: "wrong path", code: http.StatusBadRequest, path: "/test/?key=not", response: ""},
+		{name: "wrong path 2", code: http.StatusBadRequest, path: "/test/test?key=not", response: ""},
 	}
 	for _, tt := range tests {
 		tt := tt // NOTE: https://github.com/golang/go/wiki/CommonMistakes#using-goroutines-on-loop-iterator-variables
