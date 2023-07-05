@@ -44,13 +44,18 @@ func (s *server) handleGet(w http.ResponseWriter, key string) {
 // according to rfc guidlines PUT should create or replace resources
 // https://www.rfc-editor.org/rfc/rfc2616#section-9.6
 func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
+	_, ok := s.db.get(key)
+	if !ok {
+		w.WriteHeader(http.StatusCreated)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("Error reading body:", err)
 		http.Error(w, "Error reading body", http.StatusBadRequest)
 	}
 	s.db.put(key, string(body))
-	w.WriteHeader(http.StatusOK)
 }
 
 func handleNotImplemented(w http.ResponseWriter) {
