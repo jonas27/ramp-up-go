@@ -1,33 +1,36 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net/http"
 )
 
+// server does not use a multiplexer, as we only care about http method, query params and request body
 type server struct {
 	db     *database
 	server *http.Server
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.handleGet(w, r)
-	default:
-		handleNotFound(w)
-	}
-}
-
-func (s *server) handleGet(w http.ResponseWriter, r *http.Request) {
-	ok := checkPath(r.URL.Path)
-	if !ok {
+	if r.URL.Path != "/" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	key := r.URL.Query().Get("key")
-	value := s.db.get(key)
-	if value == "" {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGet(w, key)
+	case http.MethodPut:
+		s.handlePut(w, r, key)
+	default:
+		handleNotImplemented(w)
+	}
+}
+
+func (s *server) handleGet(w http.ResponseWriter, key string) {
+	value, ok := s.db.get(key)
+	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -38,10 +41,18 @@ func (s *server) handleGet(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func checkPath(path string) bool {
-	return path == "/"
+// according to rfc guidlines PUT should create or replace resources
+// https://www.rfc-editor.org/rfc/rfc2616#section-9.6
+func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Error reading body:", err)
+		http.Error(w, "Error reading body", http.StatusBadRequest)
+	}
+	s.db.put(key, string(body))
+	w.WriteHeader(http.StatusOK)
 }
 
-func handleNotFound(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusNotFound)
+func handleNotImplemented(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusNotImplemented)
 }
