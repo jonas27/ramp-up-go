@@ -74,19 +74,18 @@ func TestGet(t *testing.T) {
 	}
 }
 
-func TestPut(t *testing.T) {
+func TestPost(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name         string
-		path         string
-		reqBody      string
-		overwriteKey bool
-		code         int
-		response     string
+		name     string
+		path     string
+		reqBody  string
+		code     int
+		response string
 	}{
 		{name: "simple", path: "/db?key=test", reqBody: "new-entry", code: http.StatusCreated, response: "succeeded"},
 		{name: "weird body", path: "/db?key=test", reqBody: "ntest!@#$%^&*({ }+=)-/\\/test_;'\"", code: http.StatusCreated, response: "succeeded"},
-		{name: "empty body", path: "/db?key=test", reqBody: "", code: http.StatusCreated, response: "succeeded"},
+		{name: "key exists", path: "/db?key=exists", reqBody: "", code: http.StatusConflict, response: "succeeded"},
 		{name: "wrong path", path: "/test/test?key=not", reqBody: "new-entry", code: http.StatusNotFound, response: "succeeded"},
 	}
 	for _, tt := range tests {
@@ -96,9 +95,41 @@ func TestPut(t *testing.T) {
 			is := is.New(t)
 
 			db := make(map[string]string)
-			if tt.overwriteKey {
-				db["test"] = tt.reqBody
-			}
+			db["exists"] = "exists"
+
+			s := testServer(&db)
+
+			req := httptest.NewRequest(http.MethodPost, tt.path, strings.NewReader(tt.reqBody))
+			w := httptest.NewRecorder()
+			s.ServeHTTP(w, req)
+			is.Equal(w.Code, tt.code)
+		})
+	}
+}
+
+func TestPut(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		path     string
+		reqBody  string
+		code     int
+		response string
+	}{
+		{name: "simple", path: "/db?key=test", reqBody: "new-entry", code: http.StatusCreated, response: "succeeded"},
+		{name: "weird body", path: "/db?key=test", reqBody: "ntest!@#$%^&*({ }+=)-/\\/test_;'\"", code: http.StatusCreated, response: "succeeded"},
+		{name: "empty body", path: "/db?key=test", reqBody: "", code: http.StatusCreated, response: "succeeded"},
+		{name: "overwrite", path: "/db?key=exists", reqBody: "new-entry", code: http.StatusOK, response: "succeeded"},
+		{name: "wrong path", path: "/test/test?key=not", reqBody: "new-entry", code: http.StatusNotFound, response: "succeeded"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			is := is.New(t)
+
+			db := make(map[string]string)
+			db["exists"] = "exists"
 
 			s := testServer(&db)
 
