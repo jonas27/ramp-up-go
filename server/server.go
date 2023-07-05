@@ -19,6 +19,8 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	key := r.URL.Query().Get("key")
 	switch r.Method {
+	case http.MethodDelete:
+		s.handleDelete(w, key)
 	case http.MethodGet:
 		s.handleGet(w, key)
 	case http.MethodPut:
@@ -26,6 +28,16 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		handleNotImplemented(w)
 	}
+}
+
+func (s *server) handleDelete(w http.ResponseWriter, key string) {
+	_, ok := s.db.get(key)
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	s.db.delete(key)
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *server) handleGet(w http.ResponseWriter, key string) {

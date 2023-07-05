@@ -10,6 +10,10 @@ func (db *database) keyExists(key string) bool {
 	return ok
 }
 
+func (db *database) delete(key string) {
+	delete(*db.db, key)
+}
+
 func (db *database) get(key string) (string, bool) {
 	if !db.keyExists(key) {
 		return "", false
