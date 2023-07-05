@@ -17,8 +17,8 @@ func TestDelete(t *testing.T) {
 		path     string
 		respBody string
 	}{
-		{name: "works, key value exists", code: http.StatusOK, path: "/?key=test"},
-		{name: "not working, key value exists", code: http.StatusNotFound, path: "/?key=test1"},
+		{name: "key exists", code: http.StatusOK, path: "/db?key=test"},
+		{name: "key does not exist", code: http.StatusNotFound, path: "/?key=test1"},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -28,12 +28,8 @@ func TestDelete(t *testing.T) {
 
 			db := make(map[string]string)
 			db["test"] = "succeeded"
+			s := testServer(&db)
 
-			s := &server{
-				db: &database{
-					&db,
-				},
-			}
 			req := httptest.NewRequest(http.MethodDelete, tt.path, nil)
 			w := httptest.NewRecorder()
 			s.ServeHTTP(w, req)
@@ -50,12 +46,12 @@ func TestGet(t *testing.T) {
 		path     string
 		respBody string
 	}{
-		{name: "works, test ok", code: http.StatusOK, path: "/?key=test", respBody: "succeeded"},
-		{name: "not working, test ok", code: http.StatusNotFound, path: "/?key=not-there", respBody: "succeeded"},
-		{name: "not working, wrong value", code: http.StatusNotFound, path: "/?key=not"},
-		{name: "not working, no value", code: http.StatusNotFound, path: "/?key=", respBody: ""},
-		{name: "not working, wrong path", code: http.StatusBadRequest, path: "/test/?key=not", respBody: ""},
-		{name: "not working, wrong path 2", code: http.StatusBadRequest, path: "/test/test?key=not", respBody: ""},
+		{name: "test ok", code: http.StatusOK, path: "/db?key=test", respBody: "succeeded"},
+		{name: "test key not found", code: http.StatusNotFound, path: "/db?key=not-there", respBody: "succeeded"},
+		{name: "wrong value", code: http.StatusNotFound, path: "/?key=not"},
+		{name: "no value", code: http.StatusNotFound, path: "/?key=", respBody: ""},
+		{name: "wrong path", code: http.StatusNotFound, path: "/test/?key=not", respBody: ""},
+		{name: "wrong path 2", code: http.StatusNotFound, path: "/test/test?key=not", respBody: ""},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -65,12 +61,8 @@ func TestGet(t *testing.T) {
 
 			db := make(map[string]string)
 			db["test"] = "succeeded"
+			s := testServer(&db)
 
-			s := &server{
-				db: &database{
-					&db,
-				},
-			}
 			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
 			w := httptest.NewRecorder()
 			s.ServeHTTP(w, req)
@@ -82,7 +74,6 @@ func TestGet(t *testing.T) {
 	}
 }
 
-// TODO: for all tests: split path to path + key vars for better  testing
 func TestPut(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -93,10 +84,10 @@ func TestPut(t *testing.T) {
 		code         int
 		response     string
 	}{
-		{name: "works, simple", path: "/?key=test", reqBody: "new-entry", code: http.StatusCreated, response: "succeeded"},
-		{name: "works, weird body", path: "/?key=test", reqBody: "ntest!@#$%^&*({ }+=)-/\\/test_;'\"", code: http.StatusCreated, response: "succeeded"},
-		{name: "works, empty body", path: "/?key=test", reqBody: "", code: http.StatusCreated, response: "succeeded"},
-		{name: "not working, wrong path", path: "/test/test?key=not", reqBody: "new-entry", code: http.StatusBadRequest, response: "succeeded"},
+		{name: "simple", path: "/db?key=test", reqBody: "new-entry", code: http.StatusCreated, response: "succeeded"},
+		{name: "weird body", path: "/db?key=test", reqBody: "ntest!@#$%^&*({ }+=)-/\\/test_;'\"", code: http.StatusCreated, response: "succeeded"},
+		{name: "empty body", path: "/db?key=test", reqBody: "", code: http.StatusCreated, response: "succeeded"},
+		{name: "wrong path", path: "/test/test?key=not", reqBody: "new-entry", code: http.StatusNotFound, response: "succeeded"},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -109,15 +100,21 @@ func TestPut(t *testing.T) {
 				db["test"] = tt.reqBody
 			}
 
-			s := &server{
-				db: &database{
-					&db,
-				},
-			}
+			s := testServer(&db)
+
 			req := httptest.NewRequest(http.MethodPut, tt.path, strings.NewReader(tt.reqBody))
 			w := httptest.NewRecorder()
 			s.ServeHTTP(w, req)
 			is.Equal(w.Code, tt.code)
 		})
+	}
+}
+
+func testServer(db *map[string]string) *server {
+	return &server{
+		db: &database{
+			db,
+		},
+		mux: http.NewServeMux(),
 	}
 }

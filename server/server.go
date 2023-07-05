@@ -4,29 +4,43 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// server does not use a multiplexer, as we only care about http method, query params and request body
 type server struct {
-	db     *database
-	server *http.Server
+	db  *database
+	mux *http.ServeMux
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	s.routes()
+	s.mux.ServeHTTP(w, r)
 	}
+
+func (s *server) routes() {
+	s.mux.HandleFunc("/db", s.metricsMiddleware(s.handleDB()))
+	s.registerMetrics()
+
+	s.mux.HandleFunc("/*", s.handleBadPath())
+}
+
+func (s *server) handleDB() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	switch r.Method {
 	case http.MethodDelete:
 		s.handleDelete(w, key)
 	case http.MethodGet:
 		s.handleGet(w, key)
+		case http.MethodPost:
+			s.handlePost(w, r, key)
 	case http.MethodPut:
 		s.handlePut(w, r, key)
 	default:
-		handleNotImplemented(w)
+			s.handleNotImplemented(w)
+		}
 	}
 }
 
@@ -70,6 +84,26 @@ func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
 	s.db.put(key, string(body))
 }
 
-func handleNotImplemented(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusNotImplemented)
+func (s *server) metricsMiddleware(hf http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		httpRequestsTotal.Inc()
+		hf(w, r)
+	}
+}
+
+func (s *server) handleNotImplemented(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusNotFound)
+}
+
+func (s *server) handleBadPath() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}
+}
+
+func (s *server) registerMetrics() {
+	log.Println("registering metrics")
+	r := prometheus.NewRegistry()
+	r.MustRegister(httpRequestsTotal)
+	s.mux.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{}))
 }

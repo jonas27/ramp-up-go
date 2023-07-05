@@ -7,10 +7,19 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
 	exitFail = 1
+)
+
+var (
+	httpRequestsTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "http_requests_total",
+		Help: "Count of all HTTP requests",
+	})
 )
 
 func main() {
@@ -30,12 +39,17 @@ func run() error {
 		db: &database{
 			&db,
 		},
-		server: &http.Server{
-			Addr:              *port,
-			ReadHeaderTimeout: 3 * time.Second,
-		},
+		mux: http.NewServeMux(),
 	}
 
+	srv := &http.Server{
+		Addr:              *port,
+		ReadHeaderTimeout: 3 * time.Second,
+	}
+	srv.Handler = s.mux
+
+	s.routes()
+
 	log.Printf("Server running on port %s\n", *port)
-	return s.server.ListenAndServe()
+	return srv.ListenAndServe()
 }
