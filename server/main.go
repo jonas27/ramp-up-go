@@ -20,9 +20,9 @@ func main() {
 }
 
 func run(args []string) error {
-	port := flag.String("port", ":8080", "The server port with colon")
+	addr := flag.String("addr", ":8080", "The server address.")
 	flag.Parse()
 
-	log.Printf("Server running on port %s\n", *port)
-	return http.ListenAndServe(*port, nil)
+	log.Printf("Server running on address %s\n", *addr)
+	return http.ListenAndServe(*addr, nil)
 }
