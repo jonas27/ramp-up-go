@@ -23,16 +23,21 @@ var (
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(exitFail)
 	}
 }
 
-func run() error {
+func run(args []string) error {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	port := flag.String("port", ":8080", "The server port with colon")
-	flag.Parse()
+	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
+	var (
+		port = flags.String("port", ":8080", "The server port with colon")
+	)
+	if err := flags.Parse(args[1:]); err != nil {
+		return err
+	}
 
 	db := make(map[string]string)
 	s := &server{

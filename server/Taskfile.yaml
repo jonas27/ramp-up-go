@@ -21,7 +21,16 @@ tasks:
     cmds:
       - go test ./...
 
-  test:cover:
+  cover:
     desc: Show test coverage
     cmds:
       - go test -cover ./...
+  
+  coverHTML:
+    desc: Show test coverage
+    cmds:
+      - go test -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+      - rm coverage.out
+      - brave-browser coverage.html
+
