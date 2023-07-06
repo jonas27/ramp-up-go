@@ -1,7 +1,12 @@
-# Server
-The server of the ramp-up Go challenge servers a key-value store backed database over http.
+# Ramp-up challenge
+This is a simple http server and client for a ramp up challenge.
+For information on the challenge see [here.](https://docs.google.com/document/d/1BtVU34iuoQEs9B9N6QOl20nF1WM_e_OOyWrm1eelf-s/edit#heading=h.rxmn8ufj7ae2)
 
-## Criteria
+## Server
+The server serves a key-value store backed database over http.
+See criteria below.
+
+### Criteria
 * use net/http package 
 * use map[string]string as “database” 
 * serve "database" as a key-value store
