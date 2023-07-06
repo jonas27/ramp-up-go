@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -68,6 +69,16 @@ func run(args []string, log *slog.Logger) error {
 		}
 		fmt.Println(out)
 		return nil
+	case "put":
+		if *value == "" {
+			return fmt.Errorf("using 'put' method without value is not possible")
+		}
+		out, err := c.put(dbURL, *value)
+		if err != nil {
+			return err
+		}
+		fmt.Println(out)
+		return nil
 	default:
 		return fmt.Errorf("use either 'delete', 'get' or 'put' method")
 	}
@@ -107,6 +118,33 @@ func (c *client) get(url string) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+func (c *client) put(url string, value string) (string, error) {
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer([]byte(value)))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "text/html")
+	if err != nil {
+		return "", err
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if err = checkRespOK(resp.StatusCode); err != nil {
+		c.log.Info(strconv.Itoa(resp.StatusCode))
+		return "", err
+	}
+	if resp.StatusCode == http.StatusCreated {
+		return "created", nil
+	} else {
+		return "updated", nil
+	}
 }
 
 func checkRespOK(code int) error {
