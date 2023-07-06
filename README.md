@@ -29,8 +29,8 @@ See criteria below.
 * Make use of the flag package (why flags? cmd line tools conda/kong)
 * print error messages to stderr
 Example usage: myclient -m=put --key=foo --value=bar
-  * Print an existing key to stdout (GET)
-  * Tell users when a key was created or updated (PUT)
+  * (✓) Print an existing key to stdout (GET)
+  * (✓) Tell users when a key was created or updated (PUT)
   * (✓) Tell users when a key was successfully deleted (DELETE)
 
 
