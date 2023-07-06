@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -57,6 +58,16 @@ func run(args []string, log *slog.Logger) error {
 		}
 		fmt.Println(out)
 		return nil
+	case "get":
+		if *value != "" {
+			return fmt.Errorf("using 'get' method with value is not possible")
+		}
+		out, err := c.get(dbURL)
+		if err != nil {
+			return err
+		}
+		fmt.Println(out)
+		return nil
 	default:
 		return fmt.Errorf("use either 'delete', 'get' or 'put' method")
 	}
@@ -74,18 +85,35 @@ func (c *client) delete(url string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	if err = checkRespOK(resp); err != nil {
+	if err = checkRespOK(resp.StatusCode); err != nil {
 		c.log.Info(strconv.Itoa(resp.StatusCode))
 		return "", err
 	}
 	return "deleted", nil
 }
 
-func checkRespOK(resp *http.Response) error {
-	switch resp.StatusCode {
+func (c *client) get(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if err = checkRespOK(resp.StatusCode); err != nil {
+		c.log.Info(strconv.Itoa(resp.StatusCode))
+		return "", err
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+func checkRespOK(code int) error {
+	switch code {
 	case http.StatusOK, http.StatusCreated:
 		return nil
 	default:
-		return fmt.Errorf("the request returned with http code: %d", resp.StatusCode)
+		return fmt.Errorf("the request returned with http code: %d", code)
 	}
 }
