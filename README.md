@@ -19,3 +19,19 @@ See criteria below.
   * (✓) Delete a key and its value. Use the DELETE method and return the appropriate HTTP status code when the key is not found.
   * (✓) Use the HTTP status code to differentiate between setting (PUT) a new key and updating an existing key.
   * (✓) Bonus: POST
+
+## Client
+The client interacts with the server through http requests.
+See criteria below.
+
+### Criteria
+* client can set, get and delete keys and values by communicating with the server
+* Make use of the flag package (why flags? cmd line tools conda/kong)
+* print error messages to stderr
+Example usage: myclient -m=put --key=foo --value=bar
+  * Print an existing key to stdout (GET)
+  * Tell users when a key was created or updated (PUT)
+  * (✓) Tell users when a key was successfully deleted (DELETE)
+
+
+
