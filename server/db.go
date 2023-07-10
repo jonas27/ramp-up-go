@@ -4,22 +4,17 @@ type database struct {
 	db *map[string]string
 }
 
-func (db *database) keyExists(key string) bool {
-	d := *db.db
-	_, ok := d[key]
-	return ok
-}
-
 func (db *database) delete(key string) {
 	delete(*db.db, key)
 }
 
 func (db *database) get(key string) (string, bool) {
-	if !db.keyExists(key) {
+	d := *db.db
+	value, ok := d[key]
+	if !ok {
 		return "", false
 	}
-	d := *db.db
-	return d[key], true
+	return value, ok
 }
 
 func (db *database) put(key string, value string) {
