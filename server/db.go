@@ -1,16 +1,24 @@
 package main
 
+import (
+	"sync"
+)
+
 type database struct {
-	db *map[string]string
+	mu sync.Mutex
+	db map[string]string
 }
 
 func (db *database) delete(key string) {
-	delete(*db.db, key)
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	delete(db.db, key)
 }
 
 func (db *database) get(key string) (string, bool) {
-	d := *db.db
-	value, ok := d[key]
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	value, ok := db.db[key]
 	if !ok {
 		return "", false
 	}
@@ -18,6 +26,7 @@ func (db *database) get(key string) (string, bool) {
 }
 
 func (db *database) put(key string, value string) {
-	d := *db.db
-	d[key] = value
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	db.db[key] = value
 }

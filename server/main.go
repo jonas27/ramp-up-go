@@ -42,7 +42,7 @@ func run(args []string) error {
 	db := make(map[string]string)
 	s := &server{
 		db: &database{
-			&db,
+			db: db,
 		},
 		mux: http.NewServeMux(),
 	}

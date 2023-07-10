@@ -30,7 +30,7 @@ func TestDelete(t *testing.T) {
 
 			db := make(map[string]string)
 			db["test"] = "succeeded"
-			s := testServer(&db)
+			s := testServer(db)
 
 			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("%s?key=%s", tt.path, tt.key), nil)
 			w := httptest.NewRecorder()
@@ -64,7 +64,7 @@ func TestGet(t *testing.T) {
 
 			db := make(map[string]string)
 			db["test"] = "succeeded"
-			s := testServer(&db)
+			s := testServer(db)
 
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s?key=%s", tt.path, tt.key), nil)
 			w := httptest.NewRecorder()
@@ -101,7 +101,7 @@ func TestPost(t *testing.T) {
 			db := make(map[string]string)
 			db["exists"] = "exists"
 
-			s := testServer(&db)
+			s := testServer(db)
 
 			req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("%s?key=%s", tt.path, tt.key), strings.NewReader(tt.reqBody))
 			w := httptest.NewRecorder()
@@ -136,7 +136,7 @@ func TestPut(t *testing.T) {
 			db := make(map[string]string)
 			db["exists"] = "exists"
 
-			s := testServer(&db)
+			s := testServer(db)
 
 			req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("%s?key=%s", tt.path, tt.key), strings.NewReader(tt.reqBody))
 			w := httptest.NewRecorder()
@@ -162,7 +162,7 @@ func TestParallel(t *testing.T) {
 			t.Parallel()
 			db := make(map[string]string)
 			db["exists"] = "exists"
-			s := testServer(&db)
+			s := testServer(db)
 			s.routes()
 			is := is.New(t)
 			req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/db?key=%s", tt.key), strings.NewReader(tt.reqBody))
@@ -178,10 +178,10 @@ func TestParallel(t *testing.T) {
 	}
 }
 
-func testServer(db *map[string]string) *server {
+func testServer(db map[string]string) *server {
 	return &server{
 		db: &database{
-			db,
+			db: db,
 		},
 		mux: http.NewServeMux(),
 	}
