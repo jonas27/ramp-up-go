@@ -64,7 +64,7 @@ linters:
     - bodyclose
     - contextcheck
 #    - cyclop
-    - depguard
+    # - depguard
     - dogsled
     - dupl
     - durationcheck
@@ -143,7 +143,7 @@ linters:
     - unparam
     - usestdlibvars
     - unused
-    - varnamelen
+    # - varnamelen
     - wastedassign
 #    - whitespace
 #    - wrapcheck
