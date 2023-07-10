@@ -132,3 +132,45 @@ func TestPut(t *testing.T) {
 		})
 	}
 }
+
+func TestRunDelete(t *testing.T) {
+	is := is.New(t)
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{AddSource: true}))
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(http.MethodDelete, "http://test.com/db?key=test",
+		httpmock.NewStringResponder(200, `test-value`))
+
+	err := run([]string{"test", "-host", "http://test.com", "-m", "delete", "-key", "test"}, logger)
+	is.NoErr(err)
+}
+
+func TestRunGet(t *testing.T) {
+	is := is.New(t)
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{AddSource: true}))
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(http.MethodGet, "http://test.com/db?key=test",
+		httpmock.NewStringResponder(200, ``))
+
+	err := run([]string{"test", "-host", "http://test.com", "-m", "get", "-key", "test"}, logger)
+	is.NoErr(err)
+}
+
+func TestRunPut(t *testing.T) {
+	is := is.New(t)
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{AddSource: true}))
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(http.MethodPut, "http://test.com/db?key=test",
+		httpmock.NewStringResponder(201, `new-value`))
+
+	err := run([]string{"test", "-host", "http://test.com", "-m", "put", "-key", "test", "-value", "new-value"}, logger)
+	is.NoErr(err)
+}
