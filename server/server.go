@@ -14,11 +14,6 @@ type server struct {
 	mux *http.ServeMux
 }
 
-func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.routes()
-	s.mux.ServeHTTP(w, r)
-}
-
 func (s *server) routes() {
 	s.mux.HandleFunc("/db", s.metricsMiddleware(s.handleDB()))
 	s.registerMetrics()

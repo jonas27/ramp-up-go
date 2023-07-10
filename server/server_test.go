@@ -32,7 +32,7 @@ func TestDelete(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodDelete, tt.path, nil)
 			w := httptest.NewRecorder()
-			s.ServeHTTP(w, req)
+			s.serveHTTP(w, req)
 			is.Equal(w.Code, tt.code)
 		})
 	}
@@ -65,7 +65,7 @@ func TestGet(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
 			w := httptest.NewRecorder()
-			s.ServeHTTP(w, req)
+			s.serveHTTP(w, req)
 			is.Equal(w.Code, tt.code)
 			if tt.code == http.StatusOK {
 				is.Equal(w.Body.String(), tt.respBody)
@@ -101,7 +101,7 @@ func TestPost(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPost, tt.path, strings.NewReader(tt.reqBody))
 			w := httptest.NewRecorder()
-			s.ServeHTTP(w, req)
+			s.serveHTTP(w, req)
 			is.Equal(w.Code, tt.code)
 		})
 	}
@@ -135,7 +135,7 @@ func TestPut(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPut, tt.path, strings.NewReader(tt.reqBody))
 			w := httptest.NewRecorder()
-			s.ServeHTTP(w, req)
+			s.serveHTTP(w, req)
 			is.Equal(w.Code, tt.code)
 		})
 	}
@@ -148,4 +148,9 @@ func testServer(db *map[string]string) *server {
 		},
 		mux: http.NewServeMux(),
 	}
+}
+
+func (s *server) serveHTTP(w http.ResponseWriter, r *http.Request) {
+	s.routes()
+	s.mux.ServeHTTP(w, r)
 }
