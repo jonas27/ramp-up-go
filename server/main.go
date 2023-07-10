@@ -22,7 +22,7 @@ func main() {
 
 func run() error {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	port := flag.String("port", ":8080", "The server port with colon")
+	addr := flag.String("addr", ":8080", "The server address")
 	flag.Parse()
 
 	db := make(map[string]string)
@@ -31,11 +31,11 @@ func run() error {
 			&db,
 		},
 		server: &http.Server{
-			Addr:              *port,
+			Addr:              *addr,
 			ReadHeaderTimeout: 3 * time.Second,
 		},
 	}
 
-	log.Printf("Server running on port %s\n", *port)
+	log.Printf("Server running on port %s", *port)
 	return s.server.ListenAndServe()
 }
