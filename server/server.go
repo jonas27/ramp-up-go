@@ -83,17 +83,18 @@ func (s *server) handlePost(w http.ResponseWriter, r *http.Request, key string) 
 // https://www.rfc-editor.org/rfc/rfc2616#section-9.6
 func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
 	_, ok := s.db.get(key)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Error reading body:", err)
+		http.Error(w, "Error reading body", http.StatusBadRequest)
+		return
+	}
+	s.db.put(key, string(body))
 	if !ok {
 		w.WriteHeader(http.StatusCreated)
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		log.Println("Error reading body:", err)
-		http.Error(w, "Error reading body", http.StatusBadRequest)
-	}
-	s.db.put(key, string(body))
 }
 
 func (s *server) metricsMiddleware(hf http.HandlerFunc) http.HandlerFunc {
