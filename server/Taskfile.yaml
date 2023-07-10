@@ -1,0 +1,27 @@
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task -l
+    silent: true
+
+  run:
+    desc: Run main.go with flags
+    cmds:
+      - go run main.go
+
+  lint:
+    desc: Lint all go files in DIR.
+    cmds:
+      - golangci-lint run --timeout 10m0s ./...
+
+  test:
+    desc: Test all go files in DIR.
+    cmds:
+      - go test ./...
+
+  test:cover:
+    desc: Show test coverage
+    cmds:
+      - go test -cover ./...
