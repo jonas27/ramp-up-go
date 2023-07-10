@@ -62,7 +62,7 @@ func (s *server) handleGet(w http.ResponseWriter, key string) {
 	}
 }
 
-// according to rfc guidlines POST should only create but not replace resources
+// according to rfc guidelines POST should only create but not replace resources
 // https://www.rfc-editor.org/rfc/rfc2616#section-9.5
 func (s *server) handlePost(w http.ResponseWriter, r *http.Request, key string) {
 	_, ok := s.db.get(key)
@@ -79,7 +79,7 @@ func (s *server) handlePost(w http.ResponseWriter, r *http.Request, key string) 
 	w.WriteHeader(http.StatusCreated)
 }
 
-// according to rfc guidlines PUT should create or replace resources
+// according to rfc guidelines PUT should create or replace resources
 // https://www.rfc-editor.org/rfc/rfc2616#section-9.6
 func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
 	_, ok := s.db.get(key)
