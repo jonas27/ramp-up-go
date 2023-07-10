@@ -33,5 +33,13 @@ Example usage: myclient -m=put --key=foo --value=bar
   * (✓) Tell users when a key was created or updated (PUT)
   * (✓) Tell users when a key was successfully deleted (DELETE)
 
+## Testing
+* Test client with github.com/jarcoal/httpmock package.
+* test server with net/http/httptest package. 
+  * (✓) Only test the HTTP handler function for the server.
+  * (✓) Add tests with concurrent access, e.g. GET and PUT in parallel. These tests should fail when executed with the -race flag
+* (✓) Add tests for each command/method (GET, PUT, DELETE).
+* (✓) Visualize test coverage and try to reach more than 50%.
+
 
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -137,6 +138,38 @@ func TestPut(t *testing.T) {
 			w := httptest.NewRecorder()
 			s.serveHTTP(w, req)
 			is.Equal(w.Code, tt.code)
+		})
+	}
+}
+
+func TestParallel(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		key     string
+		reqBody string
+		code    int
+	}{
+		{name: "simple", key: "test", reqBody: "new-entry", code: http.StatusCreated},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			db := make(map[string]string)
+			db["exists"] = "exists"
+			s := testServer(&db)
+			s.routes()
+			is := is.New(t)
+			req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/db?key=%s", tt.key), strings.NewReader(tt.reqBody))
+			w := httptest.NewRecorder()
+
+			for i := 0; i < 5; i++ {
+				go func() {
+					s.mux.ServeHTTP(w, req)
+					is.Equal(w.Code, tt.code)
+				}()
+			}
 		})
 	}
 }
