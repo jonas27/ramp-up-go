@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 const (
@@ -13,16 +14,28 @@ const (
 )
 
 func main() {
-	if err := run(os.Args); err != nil {
+	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(exitFail)
 	}
 }
 
-func run(args []string) error {
-	addr := flag.String("addr", ":8080", "The server address.")
+func run() error {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	addr := flag.String("addr", ":8080", "The server address")
 	flag.Parse()
 
-	log.Printf("Server running on address %s\n", *addr)
-	return http.ListenAndServe(*addr, nil)
+	db := make(map[string]string)
+	s := &server{
+		db: &database{
+			&db,
+		},
+		server: &http.Server{
+			Addr:              *addr,
+			ReadHeaderTimeout: 3 * time.Second,
+		},
+	}
+
+	log.Printf("Server running on port %s", *port)
+	return s.server.ListenAndServe()
 }
