@@ -18,7 +18,6 @@ See criteria below.
   * (✓) Get a key’s value. Use the GET method and write data to the response body. Return the appropriate HTTP status code when the key is not found.
   * (✓) Delete a key and its value. Use the DELETE method and return the appropriate HTTP status code when the key is not found.
   * (✓) Use the HTTP status code to differentiate between setting (PUT) a new key and updating an existing key.
-  * (✓) Bonus: POST
 
 ## Client
 The client interacts with the server through http requests.

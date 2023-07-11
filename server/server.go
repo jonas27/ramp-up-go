@@ -29,8 +29,6 @@ func (s *server) handleDB() http.HandlerFunc {
 			s.handleDelete(w, key)
 		case http.MethodGet:
 			s.handleGet(w, key)
-		case http.MethodPost:
-			s.handlePost(w, r, key)
 		case http.MethodPut:
 			s.handlePut(w, r, key)
 		default:
@@ -60,23 +58,6 @@ func (s *server) handleGet(w http.ResponseWriter, key string) {
 		log.Println("Error writing response:", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
-}
-
-// according to rfc guidelines POST should only create but not replace resources
-// https://www.rfc-editor.org/rfc/rfc2616#section-9.5
-func (s *server) handlePost(w http.ResponseWriter, r *http.Request, key string) {
-	_, ok := s.db.get(key)
-	if ok {
-		w.WriteHeader(http.StatusConflict)
-		return
-	}
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		log.Println("Error reading body:", err)
-		http.Error(w, "Error reading body", http.StatusBadRequest)
-	}
-	s.db.put(key, string(body))
-	w.WriteHeader(http.StatusCreated)
 }
 
 // according to rfc guidelines PUT should create or replace resources
