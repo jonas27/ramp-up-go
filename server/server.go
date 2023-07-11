@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -16,7 +17,7 @@ type server struct {
 }
 
 func (s *server) routes() {
-	s.mux.HandleFunc("/db", s.metricsMiddleware(s.handleDB()))
+	s.mux.HandleFunc("/db", s.metricsMiddleware(s.requestLoggerMiddleware(s.handleDB())))
 	s.registerMetrics()
 
 	s.mux.HandleFunc("/*", s.handleBadPath())
@@ -108,6 +109,17 @@ func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
 func (s *server) metricsMiddleware(hf http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		httpRequestsTotal.Inc()
+		hf(w, r)
+	}
+}
+
+func (s *server) requestLoggerMiddleware(hf http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		method := r.Method
+		path := r.URL.Path
+		key := r.URL.Query().Get("key")
+		start := time.Now()
+		defer log.Printf("a request called with method: %s, path: %s, key: %s, and took %d nanoseconds", method, path, key, time.Since(start))
 		hf(w, r)
 	}
 }

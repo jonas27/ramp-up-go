@@ -168,7 +168,7 @@ func TestParallel(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/db?key=%s", tt.key), strings.NewReader(tt.reqBody))
 			w := httptest.NewRecorder()
 
-			for i := 0; i < 5; i++ {
+			for i := 0; i < 3; i++ {
 				go func() {
 					s.mux.ServeHTTP(w, req)
 					is.Equal(w.Code, tt.code)

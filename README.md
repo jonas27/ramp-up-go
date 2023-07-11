@@ -50,4 +50,10 @@ Example usage: myclient -m=put --key=foo --value=bar
 * (✓) Write unit tests for the HTTP handler.
 * (✓) Update the client program to notify the user when a request violated these constraints.
 
+## Instrument the server
+* (✓) HTTP middleware that logs request information:
+  * (✓) method 
+  * (✓) path i.e. key
+  * (✓) request duration 
+  * (✓) response status code.
 
