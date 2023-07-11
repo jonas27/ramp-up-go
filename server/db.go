@@ -1,7 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"sync"
+)
+
+const (
+	maxKeyLen         = 20
+	maxValueLen       = 200
+	maxDatabaseLength = 2000
 )
 
 type database struct {
@@ -25,8 +32,42 @@ func (db *database) get(key string) (string, bool) {
 	return value, ok
 }
 
-func (db *database) put(key string, value string) {
+type KeyError struct {
+	maxLen int
+}
+
+func (e *KeyError) Error() string {
+	return fmt.Sprintf("error: key exceeds %d characters", e.maxLen)
+}
+
+type ValueError struct {
+	maxLen int
+}
+
+func (e *ValueError) Error() string {
+	return fmt.Sprintf("error: value exceeds %d characters", e.maxLen)
+}
+
+type DatabaseError struct {
+	maxLen int
+}
+
+func (e *DatabaseError) Error() string {
+	return fmt.Sprintf("error: database exceeds %d entries", e.maxLen)
+}
+
+func (db *database) put(key string, value string) error {
+	if len(key) >= maxKeyLen {
+		return &KeyError{maxLen: maxKeyLen}
+	}
+	if len(value) >= maxValueLen {
+		return &ValueError{maxLen: maxValueLen}
+	}
+	if len(db.db) >= maxDatabaseLength {
+		return &DatabaseError{maxLen: maxDatabaseLength}
+	}
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	db.db[key] = value
+	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -70,7 +71,33 @@ func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
 		http.Error(w, "Error reading body", http.StatusBadRequest)
 		return
 	}
-	s.db.put(key, string(body))
+	err = s.db.put(key, string(body))
+	var keyErr *KeyError
+	var valueErr *ValueError
+	var dbErr *DatabaseError
+	switch {
+	case errors.As(err, &keyErr):
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		_, err = w.Write([]byte(err.Error()))
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	case errors.As(err, &valueErr):
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		_, err = w.Write([]byte(err.Error()))
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	case errors.As(err, &dbErr):
+		w.WriteHeader(http.StatusInsufficientStorage)
+		_, err = w.Write([]byte(err.Error()))
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	}
 	if !ok {
 		w.WriteHeader(http.StatusCreated)
 	} else {

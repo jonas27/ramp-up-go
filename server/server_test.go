@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -80,18 +81,21 @@ func TestGet(t *testing.T) {
 func TestPut(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name     string
-		path     string
-		key      string
-		reqBody  string
-		code     int
-		response string
+		name    string
+		path    string
+		key     string
+		reqBody string
+		code    int
 	}{
-		{name: "simple", path: "/db", key: "test", reqBody: "new-entry", code: http.StatusCreated, response: "succeeded"},
-		{name: "weird body", path: "/db", key: "test", reqBody: "ntest!@#$%^&*({ }+=)-/\\/test_;'\"", code: http.StatusCreated, response: "succeeded"},
-		{name: "empty body", path: "/db", key: "test", reqBody: "", code: http.StatusCreated, response: "succeeded"},
-		{name: "overwrite", path: "/db", key: "exists", reqBody: "new-entry", code: http.StatusOK, response: "succeeded"},
-		{name: "wrong path", path: "/test/test", key: "not", reqBody: "new-entry", code: http.StatusNotFound, response: "succeeded"},
+		{name: "simple", path: "/db", key: "test", reqBody: "new-entry", code: http.StatusCreated},
+		{name: "weird body", path: "/db", key: "test", reqBody: "ntest!@#$%^&*({ }+=)-/\\/test_;'\"", code: http.StatusCreated},
+		{name: "empty body", path: "/db", key: "test", reqBody: "", code: http.StatusCreated},
+		{name: "overwrite", path: "/db", key: "exists", reqBody: "new-entry", code: http.StatusOK},
+		{name: "wrong path", path: "/test/test", key: "not", reqBody: "new-entry", code: http.StatusNotFound},
+		{name: "key too long", path: "/db", key: "tooooooooooooooolong", reqBody: "new-entry", code: http.StatusRequestEntityTooLarge},
+		{name: "body too long", path: "/db", key: "short", code: http.StatusRequestEntityTooLarge, reqBody: `too
+		ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+		ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo long`},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -102,6 +106,36 @@ func TestPut(t *testing.T) {
 			db := make(map[string]string)
 			db["exists"] = "exists"
 
+			s := testServer(db)
+
+			req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("%s?key=%s", tt.path, tt.key), strings.NewReader(tt.reqBody))
+			w := httptest.NewRecorder()
+			s.serveHTTP(w, req)
+			is.Equal(w.Code, tt.code)
+		})
+	}
+}
+func TestDBFull(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		path    string
+		key     string
+		reqBody string
+		code    int
+	}{
+		{name: "db full", path: "/db", key: "normal", reqBody: "new-entry", code: http.StatusInsufficientStorage},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			is := is.New(t)
+
+			db := make(map[string]string)
+			for i := 0; i < 2001; i++ {
+				db[strconv.Itoa(i)] = "exists"
+			}
 			s := testServer(db)
 
 			req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("%s?key=%s", tt.path, tt.key), strings.NewReader(tt.reqBody))
