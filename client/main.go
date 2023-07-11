@@ -17,6 +17,14 @@ const (
 	exitFail = 1
 )
 
+type requestError struct {
+	code int
+}
+
+func (e *requestError) Error() string {
+	return fmt.Sprintf("the request returned with http code: %d", e.code)
+}
+
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{AddSource: true}))
 
@@ -152,6 +160,6 @@ func checkRespOK(code int) error {
 	case http.StatusOK, http.StatusCreated:
 		return nil
 	default:
-		return fmt.Errorf("the request returned with http code: %d", code)
+		return &requestError{code}
 	}
 }

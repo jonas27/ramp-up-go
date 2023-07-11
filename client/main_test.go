@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -31,10 +32,10 @@ func TestDelete(t *testing.T) {
 			defer httpmock.DeactivateAndReset()
 
 			httpmock.RegisterResponder(http.MethodDelete, "http://test.com/db?key=test",
-				httpmock.NewStringResponder(200, ``))
+				httpmock.NewStringResponder(http.StatusOK, ``))
 
 			httpmock.RegisterResponder(http.MethodDelete, "http://test.com/db?key=not-there",
-				httpmock.NewStringResponder(400, ``))
+				httpmock.NewStringResponder(http.StatusBadRequest, ``))
 
 			params := url.Values{}
 			params.Set("key", tt.key)
@@ -43,7 +44,8 @@ func TestDelete(t *testing.T) {
 			c := client{log: slog.New(slog.NewJSONHandler(os.Stderr, nil))}
 			out, err := c.delete(dbURL)
 			if tt.isErr {
-				is.Equal(fmt.Errorf("the request returned with http code: %d", tt.code), err)
+				reqErro := requestError{tt.code}
+				is.Equal(reqErro.Error(), err.Error())
 			} else {
 				is.NoErr(err)
 				is.Equal(out, "deleted")
@@ -72,10 +74,10 @@ func TestGet(t *testing.T) {
 			defer httpmock.DeactivateAndReset()
 
 			httpmock.RegisterResponder(http.MethodGet, "http://test.com/db?key=test",
-				httpmock.NewStringResponder(200, `test-value`))
+				httpmock.NewStringResponder(http.StatusOK, `test-value`))
 
 			httpmock.RegisterResponder(http.MethodGet, "http://test.com/db?key=not-there",
-				httpmock.NewStringResponder(400, ``))
+				httpmock.NewStringResponder(http.StatusBadRequest, ``))
 
 			params := url.Values{}
 			params.Set("key", tt.key)
@@ -113,12 +115,12 @@ func TestPut(t *testing.T) {
 			defer httpmock.DeactivateAndReset()
 
 			httpmock.RegisterResponder(http.MethodPut, "http://test.com/db?key=test",
-				httpmock.NewStringResponder(200, ``))
+				httpmock.NewStringResponder(http.StatusOK, ``))
 			httpmock.RegisterResponder(http.MethodPut, "http://test.com/db?key=test-new",
-				httpmock.NewStringResponder(201, ``))
+				httpmock.NewStringResponder(http.StatusCreated, ``))
 
 			params := url.Values{}
-			params.Set("key", "test")
+			params.Set("key", tt.key)
 			dbURL := fmt.Sprintf("%s/db?%s", "http://test.com", params.Encode())
 
 			c := client{log: slog.New(slog.NewJSONHandler(os.Stderr, nil))}
@@ -127,8 +129,51 @@ func TestPut(t *testing.T) {
 				is.Equal(fmt.Errorf("the request returned with http code: %d", tt.code), err)
 			} else {
 				is.NoErr(err)
-				is.Equal(out, "updated")
+				if tt.code == http.StatusOK {
+					is.Equal(out, "updated")
+				} else {
+					is.Equal(out, "created")
+				}
 			}
+		})
+	}
+}
+
+func TestPutLimits(t *testing.T) {
+	tests := []struct {
+		name  string
+		code  int
+		key   string
+		value string
+	}{
+		{name: "key too long", key: "tooooooooooooooolong", value: "new-entry", code: http.StatusRequestEntityTooLarge},
+		{name: "body too long", key: "largebody", code: http.StatusRequestEntityTooLarge, value: `too
+		ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+		ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo long`},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			is := is.New(t)
+			httpmock.Activate()
+			defer httpmock.DeactivateAndReset()
+
+			httpmock.RegisterResponder(http.MethodPut, "http://test.com/db?key=tooooooooooooooolong",
+				httpmock.NewStringResponder(http.StatusRequestEntityTooLarge, ``))
+			httpmock.RegisterResponder(http.MethodPut, "http://test.com/db?key=largebody",
+				httpmock.NewStringResponder(http.StatusRequestEntityTooLarge, ``))
+
+			params := url.Values{}
+			params.Set("key", tt.key)
+			dbURL := fmt.Sprintf("%s/db?%s", "http://test.com", params.Encode())
+
+			c := client{log: slog.New(slog.NewJSONHandler(os.Stderr, nil))}
+			_, err := c.put(dbURL, tt.value)
+			var reqErr *requestError
+			if errors.As(err, &reqErr) {
+				is.Equal(reqErr.code, tt.code)
+			}
+
 		})
 	}
 }
