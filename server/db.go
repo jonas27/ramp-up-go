@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"sync"
 )
 
@@ -70,4 +72,12 @@ func (db *database) put(key string, value string) error {
 	defer db.mu.Unlock()
 	db.db[key] = value
 	return nil
+}
+
+func (db *database) persist() error {
+	jsonDB, err := json.Marshal(&db)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile("database.json", jsonDB, 0644)
 }

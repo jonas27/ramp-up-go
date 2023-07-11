@@ -57,3 +57,8 @@ Example usage: myclient -m=put --key=foo --value=bar
   * (✓) request duration 
   * (✓) response status code.
 
+## Extra tasks (optional):
+* (✓) Use the filesystem for storage instead of the map[string]string.
+* Verify that the server doesn’t leak goroutines.
+
+

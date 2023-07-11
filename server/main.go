@@ -47,6 +47,22 @@ func run(args []string) error {
 		mux: http.NewServeMux(),
 	}
 
+	ticker := time.NewTicker(100 * time.Second)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				s.db.persist()
+			case <-quit:
+				log.Println("stopping database persistent ticker")
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+	defer close(quit)
+
 	srv := &http.Server{
 		Addr:              *port,
 		ReadHeaderTimeout: 3 * time.Second,
