@@ -43,11 +43,11 @@ Example usage: myclient -m=put --key=foo --value=bar
 ## Secure the server
 * (✓) Prevent race conditions by synchronizing access to the database (Use sync.Mutex)
 * (✓) Verify using the test case from the previous example
-* Prevent too large writes to the database
-  * Limit the length that keys and values are allowed to have 
-  * limit the overall number of entries in the database
-  * Server should return appropriate HTTP status code when attempting to send data that violates these constraints.
-* Write unit tests for the HTTP handler.
+* (✓) Prevent too large writes to the database
+  * (✓) Limit the length that keys and values are allowed to have 
+  * (✓) limit the overall number of entries in the database
+  * (✓) Server should return appropriate HTTP status code when attempting to send data that violates these constraints.
+* (✓) Write unit tests for the HTTP handler.
 * Update the client program to notify the user when a request violated these constraints.
 
 
