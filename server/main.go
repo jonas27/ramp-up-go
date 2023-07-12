@@ -36,6 +36,7 @@ func run() error {
 		},
 	}
 
-	log.Printf("Server running on port %s", *port)
+  
+	log.Printf("Server running on addr %s", *addr)
 	return s.server.ListenAndServe()
 }

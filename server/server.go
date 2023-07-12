@@ -1,34 +1,36 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net/http"
-	"strings"
 )
 
+// server does not use a multiplexer, as we only care about http method, query params and request body
 type server struct {
 	db     *database
 	server *http.Server
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.handleGet(w, r)
-	default:
-		handleNotFound(w)
-	}
-}
-
-func (s *server) handleGet(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/")
-	paths := strings.Split(path, "/")
-	if len(paths) > 1 {
+	if r.URL.Path != "/" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	value := s.db.get(paths[0])
-	if value == "" {
+	key := r.URL.Query().Get("key")
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGet(w, key)
+	case http.MethodPut:
+		s.handlePut(w, r, key)
+	default:
+		handleNotImplemented(w)
+	}
+}
+
+func (s *server) handleGet(w http.ResponseWriter, key string) {
+	value, ok := s.db.get(key)
+	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -37,9 +39,25 @@ func (s *server) handleGet(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error writing response:", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
-
 }
 
-func handleNotFound(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusNotFound)
+// according to rfc guidlines PUT should create or replace resources
+// https://www.rfc-editor.org/rfc/rfc2616#section-9.6
+func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
+	_, ok := s.db.get(key)
+	if !ok {
+		w.WriteHeader(http.StatusCreated)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Error reading body:", err)
+		http.Error(w, "Error reading body", http.StatusBadRequest)
+	}
+	s.db.put(key, string(body))
+}
+
+func handleNotImplemented(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusNotImplemented)
 }
