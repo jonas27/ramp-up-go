@@ -1,4 +1,4 @@
-module server
+module github.com/jonas27/rampu-up-go/server
 
 go 1.20
 

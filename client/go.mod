@@ -1,4 +1,4 @@
-module client
+module github.com/jonas27/rampu-up-go/client
 
 go 1.20
 
