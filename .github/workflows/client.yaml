@@ -1,4 +1,4 @@
-name: Go Server Tests
+name: Go Client Tests
 
 on:
   push:
