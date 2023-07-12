@@ -53,7 +53,10 @@ func run(args []string) error {
 		for {
 			select {
 			case <-ticker.C:
-				s.db.persist()
+				err := s.db.persist()
+				if err != nil {
+					log.Println(err)
+				}
 			case <-quit:
 				log.Println("stopping database persistent ticker")
 				ticker.Stop()

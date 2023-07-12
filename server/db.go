@@ -79,5 +79,5 @@ func (db *database) persist() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile("database.json", jsonDB, 0644)
+	return os.WriteFile("database.json", jsonDB, 0600)
 }
