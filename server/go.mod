@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/matryer/is v1.4.1
 	github.com/prometheus/client_golang v1.16.0
+	go.uber.org/goleak v1.2.1
 )
 
 require (

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/matryer/is"
+	"go.uber.org/goleak"
 )
 
 func TestDelete(t *testing.T) {
@@ -176,6 +177,10 @@ func TestParallel(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
 }
 
 func testServer(db map[string]string) *server {
