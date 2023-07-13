@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"sync"
 )
@@ -19,10 +20,15 @@ type database struct {
 	db map[string]string
 }
 
-func (db *database) delete(key string) {
+func (db *database) delete(key string) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	_, ok := db.db[key]
+	if !ok {
+		return &NoEntryError{key: key}
+	}
 	delete(db.db, key)
+	return nil
 }
 
 func (db *database) get(key string) (string, bool) {
@@ -33,6 +39,14 @@ func (db *database) get(key string) (string, bool) {
 		return "", false
 	}
 	return value, ok
+}
+
+type NoEntryError struct {
+	key string
+}
+
+func (e *NoEntryError) Error() string {
+	return fmt.Sprintf("error: key \"%s\" does not exist", e.key)
 }
 
 type KeyError struct {
@@ -59,20 +73,24 @@ func (e *DatabaseError) Error() string {
 	return fmt.Sprintf("error: database exceeds %d entries", e.maxLen)
 }
 
-func (db *database) put(key string, value string) error {
+func (db *database) put(key string, value string) (int, error) {
 	if len(key) >= maxKeyLen {
-		return &KeyError{maxLen: maxKeyLen}
+		return 0, &KeyError{maxLen: maxKeyLen}
 	}
 	if len(value) >= maxValueLen {
-		return &ValueError{maxLen: maxValueLen}
+		return 0, &ValueError{maxLen: maxValueLen}
 	}
 	if len(db.db) >= maxDatabaseLength {
-		return &DatabaseError{maxLen: maxDatabaseLength}
+		return 0, &DatabaseError{maxLen: maxDatabaseLength}
 	}
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	_, ok := db.db[key]
 	db.db[key] = value
-	return nil
+	if !ok {
+		return http.StatusCreated, nil
+	}
+	return http.StatusOK, nil
 }
 
 func (db *database) persist() error {

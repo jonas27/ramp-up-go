@@ -40,13 +40,14 @@ func (s *server) handleDB() http.HandlerFunc {
 	}
 }
 
+const ti = 1
+
 func (s *server) handleDelete(w http.ResponseWriter, key string) {
-	_, ok := s.db.get(key)
-	if !ok {
+	err := s.db.delete(key)
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	s.db.delete(key)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -61,19 +62,24 @@ func (s *server) handleGet(w http.ResponseWriter, key string) {
 		log.Println("Error writing response:", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
+	ss := []struct {
+		name *http.Server
+	}{
+		{name: &http.Server{ReadHeaderTimeout: ti}},
+	}
+	_ = ss
 }
 
 // according to rfc guidelines PUT should create or replace resources
 // https://www.rfc-editor.org/rfc/rfc2616#section-9.6
 func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
-	_, ok := s.db.get(key)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("Error reading body:", err)
 		http.Error(w, "Error reading body", http.StatusBadRequest)
 		return
 	}
-	err = s.db.put(key, string(body))
+	code, err := s.db.put(key, string(body))
 	var keyErr *KeyError
 	var valueErr *ValueError
 	var dbErr *DatabaseError
@@ -100,7 +106,7 @@ func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
 		}
 		return
 	}
-	if !ok {
+	if code == http.StatusCreated {
 		w.WriteHeader(http.StatusCreated)
 	} else {
 		w.WriteHeader(http.StatusOK)
