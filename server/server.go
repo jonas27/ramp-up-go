@@ -12,8 +12,9 @@ import (
 )
 
 type server struct {
-	db  *database
-	mux *http.ServeMux
+	db                   *database
+	mux                  *http.ServeMux
+	requestCounterMetric prometheus.Counter
 }
 
 func (s *server) routes() {
@@ -108,7 +109,7 @@ func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
 
 func (s *server) metricsMiddleware(hf http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		httpRequestsTotal.Inc()
+		s.requestCounterMetric.Inc()
 		hf(w, r)
 	}
 }
@@ -119,7 +120,8 @@ func (s *server) requestLoggerMiddleware(hf http.HandlerFunc) http.HandlerFunc {
 		path := r.URL.Path
 		key := r.URL.Query().Get("key")
 		start := time.Now()
-		defer log.Printf("a request called with method: %s, path: %s, key: %s, and took %d nanoseconds", method, path, key, time.Since(start))
+		defer log.Printf("a request called with method: %s, path: %s, key: %s, and took %d nanoseconds",
+			method, path, key, time.Since(start))
 		hf(w, r)
 	}
 }
@@ -137,6 +139,6 @@ func (s *server) handleBadPath() http.HandlerFunc {
 func (s *server) registerMetrics() {
 	log.Println("registering metrics")
 	r := prometheus.NewRegistry()
-	r.MustRegister(httpRequestsTotal)
-	s.mux.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{}))
+	r.MustRegister(s.requestCounterMetric)
+	s.mux.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{})) //nolint:exhaustruct
 }

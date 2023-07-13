@@ -9,20 +9,24 @@ import (
 	"testing"
 
 	"github.com/matryer/is"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/goleak"
+)
+
+const (
+	exists = "exists"
 )
 
 func TestDelete(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name     string
-		code     int
-		path     string
-		key      string
-		respBody string
+		name string
+		code int
+		path string
+		key  string
 	}{
 		{name: "key exists", code: http.StatusOK, path: "/db", key: "test"},
-		{name: "key does not exist", code: http.StatusNotFound, path: "/", key: "test1"},
+		{name: "key does not exist", code: http.StatusNotFound, path: "/db", key: "test1"},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -89,11 +93,17 @@ func TestPut(t *testing.T) {
 		code    int
 	}{
 		{name: "simple", path: "/db", key: "test", reqBody: "new-entry", code: http.StatusCreated},
-		{name: "weird body", path: "/db", key: "test", reqBody: "ntest!@#$%^&*({ }+=)-/\\/test_;'\"", code: http.StatusCreated},
+		{
+			name: "weird body", path: "/db", key: "test", reqBody: "ntest!@#$%^&*({ }+=)-/\\/test_;'\"",
+			code: http.StatusCreated,
+		},
 		{name: "empty body", path: "/db", key: "test", reqBody: "", code: http.StatusCreated},
 		{name: "overwrite", path: "/db", key: "exists", reqBody: "new-entry", code: http.StatusOK},
 		{name: "wrong path", path: "/test/test", key: "not", reqBody: "new-entry", code: http.StatusNotFound},
-		{name: "key too long", path: "/db", key: "tooooooooooooooolong", reqBody: "new-entry", code: http.StatusRequestEntityTooLarge},
+		{
+			name: "key too long", path: "/db", key: "tooooooooooooooolong", reqBody: "new-entry",
+			code: http.StatusRequestEntityTooLarge,
+		},
 		{name: "body too long", path: "/db", key: "short", code: http.StatusRequestEntityTooLarge, reqBody: `too
 		ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 		ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo long`},
@@ -105,7 +115,7 @@ func TestPut(t *testing.T) {
 			is := is.New(t)
 
 			db := make(map[string]string)
-			db["exists"] = "exists"
+			db[exists] = exists
 
 			s := testServer(db)
 
@@ -116,6 +126,7 @@ func TestPut(t *testing.T) {
 		})
 	}
 }
+
 func TestDBFull(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -135,7 +146,7 @@ func TestDBFull(t *testing.T) {
 
 			db := make(map[string]string)
 			for i := 0; i < 2001; i++ {
-				db[strconv.Itoa(i)] = "exists"
+				db[strconv.Itoa(i)] = exists
 			}
 			s := testServer(db)
 
@@ -184,11 +195,16 @@ func TestMain(m *testing.M) {
 }
 
 func testServer(db map[string]string) *server {
+	httpRequestsTotal := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "http_requests_total",
+		Help: "Count of all HTTP requests",
+	})
 	return &server{
 		db: &database{
 			db: db,
 		},
-		mux: http.NewServeMux(),
+		mux:                  http.NewServeMux(),
+		requestCounterMetric: httpRequestsTotal,
 	}
 }
 

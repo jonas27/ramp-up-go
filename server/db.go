@@ -11,6 +11,7 @@ const (
 	maxKeyLen         = 20
 	maxValueLen       = 200
 	maxDatabaseLength = 2000
+	filePerm          = 0o600
 )
 
 type database struct {
@@ -77,7 +78,7 @@ func (db *database) put(key string, value string) error {
 func (db *database) persist() error {
 	jsonDB, err := json.Marshal(&db)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal json: %w", err)
 	}
-	return os.WriteFile("database.json", jsonDB, 0600)
+	return os.WriteFile("database.json", jsonDB, filePerm) //nolint
 }

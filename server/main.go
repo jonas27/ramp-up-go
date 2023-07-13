@@ -12,14 +12,9 @@ import (
 )
 
 const (
-	exitFail = 1
-)
-
-var (
-	httpRequestsTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "http_requests_total",
-		Help: "Count of all HTTP requests",
-	})
+	exitFail      = 1
+	serverTimeout = 3
+	tickerTime    = 100
 )
 
 func main() {
@@ -32,22 +27,25 @@ func main() {
 func run(args []string) error {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
-	var (
-		port = flags.String("port", ":8080", "The server port with colon")
-	)
+	addr := flags.String("addr", ":8080", "The server addr with colon")
 	if err := flags.Parse(args[1:]); err != nil {
-		return err
+		return fmt.Errorf("failed to parse flags: %w", err)
 	}
 
 	db := make(map[string]string)
+	httpRequestsTotal := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "http_requests_total",
+		Help: "Count of all HTTP requests",
+	})
 	s := &server{
 		db: &database{
 			db: db,
 		},
-		mux: http.NewServeMux(),
+		mux:                  http.NewServeMux(),
+		requestCounterMetric: httpRequestsTotal,
 	}
 
-	ticker := time.NewTicker(100 * time.Second)
+	ticker := time.NewTicker(tickerTime * time.Second)
 	quit := make(chan struct{})
 	go func() {
 		for {
@@ -67,13 +65,13 @@ func run(args []string) error {
 	defer close(quit)
 
 	srv := &http.Server{
-		Addr:              *port,
-		ReadHeaderTimeout: 3 * time.Second,
+		Addr:              *addr,
+		ReadHeaderTimeout: serverTimeout * time.Second,
 	}
 	srv.Handler = s.mux
 
 	s.routes()
 
-	log.Printf("Server running on port %s\n", *port)
-	return srv.ListenAndServe()
+	log.Printf("Server running on addr %s", *addr)
+	return fmt.Errorf("the server failed with error: %w", srv.ListenAndServe())
 }
