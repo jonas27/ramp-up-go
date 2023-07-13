@@ -20,7 +20,6 @@ tasks:
     desc: Test all go files in DIR.
     cmds:
       - go test ./...
-
   cover:
     desc: Show test coverage
     cmds:
@@ -38,4 +37,3 @@ tasks:
     desc: Tests the parallel test with race flag
     cmds:
       - CGO_ENABLED=1 go test ./... -run TestParallel -race
-
