@@ -69,7 +69,7 @@ func (s *server) handleGet(w http.ResponseWriter, key string) {
 
 // according to rfc guidelines PUT should create or replace resources
 // https://www.rfc-editor.org/rfc/rfc2616#section-9.6
-func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
+func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) { //nolint:cyclop
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		s.log.Info("Error reading body", "error", err)

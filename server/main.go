@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/exp/slog"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -46,37 +50,56 @@ func run(args []string, log *slog.Logger) error {
 		mux:                  http.NewServeMux(),
 		requestCounterMetric: httpRequestsTotal,
 	}
-
-	ticker := time.NewTicker(tickerSeconds * time.Second)
-	quit := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				err := s.db.persist()
-				if err != nil {
-					log.Info(err.Error())
-				}
-			case <-quit:
-				log.Info("stopping database persistent ticker")
-				ticker.Stop()
-				return
-			}
-		}
-	}()
-	defer func() {
-		close(quit)
-		time.Sleep(1 * time.Second)
-	}()
-
 	srv := &http.Server{
 		Addr:              *addr,
 		ReadHeaderTimeout: serverTimeoutSeconds * time.Second,
 	}
 	srv.Handler = s.mux
-
 	s.routes()
 
-	log.Info("Server running", "address", *addr)
-	return fmt.Errorf("the server failed with error: %w", srv.ListenAndServe())
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	errWg, errCtx := errgroup.WithContext(ctx)
+
+	ticker := time.NewTicker(tickerSeconds * time.Second)
+	errWg.Go(func() error {
+		for {
+			select {
+			case <-ticker.C:
+				err := s.db.persist()
+				if err != nil {
+					return err
+				}
+			case <-errCtx.Done():
+				log.Info("stopping database and persist to disk")
+				ticker.Stop()
+				err := s.db.persist()
+				if err != nil {
+					return fmt.Errorf("could not persist db to disk: %w", err)
+				}
+				stop()
+				return nil
+			}
+		}
+	})
+
+	errWg.Go(func() error {
+		log.Info("Server running", "address", *addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("the server failed with error: %w", err)
+		}
+		return nil
+	})
+
+	errWg.Go(func() error {
+		<-errCtx.Done()
+		// https://gist.github.com/s8508235/bc248d046d5001d5cae46cc39066cdf5?permalink_comment_id=4360249#gistcomment-4360249
+		return srv.Shutdown(context.Background())
+	})
+
+	err := errWg.Wait()
+	if err == context.Canceled || err == nil {
+		fmt.Println("gracefully quit server")
+		return nil
+	}
+	return err
 }

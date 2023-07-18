@@ -100,5 +100,9 @@ func (db *database) persist() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal json: %w", err)
 	}
-	return fmt.Errorf("can't write to file: %w", os.WriteFile("database.json", jsonDB, filePerm))
+	err = os.WriteFile("./database.json", jsonDB, filePerm)
+	if err != nil {
+		return fmt.Errorf("can't write to file: %w", err)
+	}
+	return nil
 }
