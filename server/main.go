@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/exp/slog"
 )
 
 const (
@@ -18,14 +18,15 @@ const (
 )
 
 func main() {
-	if err := run(os.Args); err != nil {
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{AddSource: true}))
+
+	if err := run(os.Args, logger); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(exitFail)
 	}
 }
 
-func run(args []string) error {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+func run(args []string, log *slog.Logger) error {
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 	addr := flags.String("addr", ":8080", "The server addr with colon")
 	if err := flags.Parse(args[1:]); err != nil {
@@ -38,6 +39,7 @@ func run(args []string) error {
 		Help: "Count of all HTTP requests",
 	})
 	s := &server{
+		log: log,
 		db: &database{
 			db: db,
 		},
@@ -53,10 +55,10 @@ func run(args []string) error {
 			case <-ticker.C:
 				err := s.db.persist()
 				if err != nil {
-					log.Println(err)
+					log.Info(err.Error())
 				}
 			case <-quit:
-				log.Println("stopping database persistent ticker")
+				log.Info("stopping database persistent ticker")
 				ticker.Stop()
 				return
 			}
@@ -75,6 +77,6 @@ func run(args []string) error {
 
 	s.routes()
 
-	log.Printf("Server running on addr %s", *addr)
+	log.Info("Server running", "address", *addr)
 	return fmt.Errorf("the server failed with error: %w", srv.ListenAndServe())
 }

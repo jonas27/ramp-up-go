@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/matryer/is"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/goleak"
+	"golang.org/x/exp/slog"
 )
 
 const (
@@ -230,7 +232,9 @@ func testServer(db map[string]string) *server {
 		Name: "http_requests_total",
 		Help: "Count of all HTTP requests",
 	})
+	log := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{AddSource: true}))
 	return &server{
+		log: log,
 		db: &database{
 			db: db,
 		},

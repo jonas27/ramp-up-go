@@ -3,15 +3,16 @@ package main
 import (
 	"errors"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/exp/slog"
 )
 
 type server struct {
+	log                  *slog.Logger
 	db                   *database
 	mux                  *http.ServeMux
 	requestCounterMetric prometheus.Counter
@@ -61,7 +62,7 @@ func (s *server) handleGet(w http.ResponseWriter, key string) {
 	}
 	_, err := w.Write([]byte(value))
 	if err != nil {
-		log.Println("Error writing response:", err)
+		s.log.Info("Error writing response", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
@@ -71,7 +72,7 @@ func (s *server) handleGet(w http.ResponseWriter, key string) {
 func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Println("Error reading body:", err)
+		s.log.Info("Error reading body", "error", err)
 		http.Error(w, "Error reading body", http.StatusBadRequest)
 		return
 	}
@@ -83,22 +84,30 @@ func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
 	case errors.As(err, &keyErr):
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		_, err = w.Write([]byte(err.Error()))
-		log.Println(err)
+		if err != nil {
+			s.log.Info(err.Error())
+		}
 		return
 	case errors.As(err, &valueErr):
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		_, err = w.Write([]byte(err.Error()))
-		log.Println(err)
+		if err != nil {
+			s.log.Info(err.Error())
+		}
 		return
 	case errors.As(err, &dbErr):
 		w.WriteHeader(http.StatusInsufficientStorage)
 		_, err = w.Write([]byte(err.Error()))
-		log.Println(err)
+		if err != nil {
+			s.log.Info(err.Error())
+		}
 		return
 	case err != nil:
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err = w.Write([]byte(err.Error()))
-		log.Println(err)
+		if err != nil {
+			s.log.Info(err.Error())
+		}
 		return
 	}
 	if code == http.StatusCreated {
@@ -121,8 +130,7 @@ func (s *server) requestLoggerMiddleware(hf http.HandlerFunc) http.HandlerFunc {
 		path := r.URL.Path
 		key := r.URL.Query().Get("key")
 		start := time.Now()
-		defer log.Printf("a request called with method: %s, path: %s, key: %s, and took %d nanoseconds",
-			method, path, key, time.Since(start))
+		defer s.log.Info("request info", "method", method, "path", path, "key", key, "time in nanosec", time.Since(start))
 		hf(w, r)
 	}
 }
@@ -138,7 +146,7 @@ func (s *server) handleBadPath() http.HandlerFunc {
 }
 
 func (s *server) registerMetrics() {
-	log.Println("registering metrics")
+	s.log.Info("registering metrics")
 	r := prometheus.NewRegistry()
 	r.MustRegister(s.requestCounterMetric)
 	s.mux.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{})) //nolint:exhaustruct
