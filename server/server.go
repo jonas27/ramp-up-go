@@ -44,11 +44,15 @@ const ti = 1
 
 func (s *server) handleDelete(w http.ResponseWriter, key string) {
 	err := s.db.delete(key)
-	if err != nil {
+	var noEntryErr *NoEntryError
+	switch {
+	case errors.As(err, &noEntryErr):
 		w.WriteHeader(http.StatusNotFound)
-		return
+	case err != nil:
+		w.WriteHeader(http.StatusInternalServerError)
+	default:
+		w.WriteHeader(http.StatusOK)
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func (s *server) handleGet(w http.ResponseWriter, key string) {
