@@ -40,8 +40,6 @@ func (s *server) handleDB() http.HandlerFunc {
 	}
 }
 
-const ti = 1
-
 func (s *server) handleDelete(w http.ResponseWriter, key string) {
 	err := s.db.delete(key)
 	var noEntryErr *NoEntryError

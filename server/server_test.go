@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	exists = "exists"
+	exists    = "exists"
+	succeeded = "succeeded"
 )
 
 func TestDelete(t *testing.T) {
@@ -35,7 +36,7 @@ func TestDelete(t *testing.T) {
 			is := is.New(t)
 
 			db := make(map[string]string)
-			db["test"] = "succeeded"
+			db["test"] = succeeded
 			s := testServer(db)
 
 			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("%s?key=%s", tt.path, tt.key), nil)
@@ -59,8 +60,6 @@ func TestGet(t *testing.T) {
 		{name: "test key not found", code: http.StatusNotFound, path: "/db", key: "not-there", respBody: "succeeded"},
 		{name: "wrong value", code: http.StatusNotFound, path: "/", key: "not"},
 		{name: "no value", code: http.StatusNotFound, path: "/", key: "", respBody: ""},
-		{name: "wrong path", code: http.StatusNotFound, path: "/test/", key: "not", respBody: ""},
-		{name: "wrong path 2", code: http.StatusNotFound, path: "/test/test", key: "not", respBody: ""},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -69,7 +68,7 @@ func TestGet(t *testing.T) {
 			is := is.New(t)
 
 			db := make(map[string]string)
-			db["test"] = "succeeded"
+			db["test"] = succeeded
 			s := testServer(db)
 
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s?key=%s", tt.path, tt.key), nil)
@@ -99,7 +98,6 @@ func TestPut(t *testing.T) {
 		},
 		{name: "empty body", path: "/db", key: "test", reqBody: "", code: http.StatusCreated},
 		{name: "overwrite", path: "/db", key: "exists", reqBody: "new-entry", code: http.StatusOK},
-		{name: "wrong path", path: "/test/test", key: "not", reqBody: "new-entry", code: http.StatusNotFound},
 		{
 			name: "key too long", path: "/db", key: "tooooooooooooooolong", reqBody: "new-entry",
 			code: http.StatusRequestEntityTooLarge,
@@ -123,6 +121,39 @@ func TestPut(t *testing.T) {
 			w := httptest.NewRecorder()
 			s.serveHTTP(w, req)
 			is.Equal(w.Code, tt.code)
+		})
+	}
+}
+
+func TestWrongPath(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		path     string
+		key      string
+		respBody string
+		code     int
+	}{
+		{name: "wrong path", code: http.StatusNotFound, path: "/test/", key: "not", respBody: ""},
+		{name: "wrong path 2", code: http.StatusNotFound, path: "/test/test", key: "not", respBody: ""},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			is := is.New(t)
+
+			db := make(map[string]string)
+			db["test"] = "succeeded"
+			s := testServer(db)
+
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s?key=%s", tt.path, tt.key), nil)
+			w := httptest.NewRecorder()
+			s.serveHTTP(w, req)
+			is.Equal(w.Code, tt.code)
+			if tt.code == http.StatusOK {
+				is.Equal(w.Body.String(), tt.respBody)
+			}
 		})
 	}
 }
