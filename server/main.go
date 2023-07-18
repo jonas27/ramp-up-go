@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	exitFail      = 1
-	serverTimeout = 3
-	tickerTime    = 100
+	exitFail             = 1
+	serverTimeoutSeconds = 3
+	tickerSeconds        = 100
 )
 
 func main() {
@@ -45,7 +45,7 @@ func run(args []string) error {
 		requestCounterMetric: httpRequestsTotal,
 	}
 
-	ticker := time.NewTicker(tickerTime * time.Second)
+	ticker := time.NewTicker(tickerSeconds * time.Second)
 	quit := make(chan struct{})
 	go func() {
 		for {
@@ -62,11 +62,14 @@ func run(args []string) error {
 			}
 		}
 	}()
-	defer close(quit)
+	defer func() {
+		close(quit)
+		time.Sleep(1 * time.Second)
+	}()
 
 	srv := &http.Server{
 		Addr:              *addr,
-		ReadHeaderTimeout: serverTimeout * time.Second,
+		ReadHeaderTimeout: serverTimeoutSeconds * time.Second,
 	}
 	srv.Handler = s.mux
 
