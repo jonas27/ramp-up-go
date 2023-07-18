@@ -6,6 +6,8 @@ require (
 	github.com/matryer/is v1.4.1
 	github.com/prometheus/client_golang v1.16.0
 	go.uber.org/goleak v1.2.1
+	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
+	golang.org/x/sync v0.2.0
 )
 
 require (
