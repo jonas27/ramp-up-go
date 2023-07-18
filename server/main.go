@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -30,26 +31,14 @@ func main() {
 	}
 }
 
-func run(args []string, log *slog.Logger) error {
+func run(args []string, log *slog.Logger) error { //nolint:cyclop,funlen
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 	addr := flags.String("addr", ":8080", "The server addr with colon")
 	if err := flags.Parse(args[1:]); err != nil {
 		return fmt.Errorf("failed to parse flags: %w", err)
 	}
 
-	db := make(map[string]string)
-	httpRequestsTotal := prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "http_requests_total",
-		Help: "Count of all HTTP requests",
-	})
-	s := &server{
-		log: log,
-		db: &database{
-			db: db,
-		},
-		mux:                  http.NewServeMux(),
-		requestCounterMetric: httpRequestsTotal,
-	}
+	s := newServer(log)
 	srv := &http.Server{
 		Addr:              *addr,
 		ReadHeaderTimeout: serverTimeoutSeconds * time.Second,
@@ -84,7 +73,7 @@ func run(args []string, log *slog.Logger) error {
 
 	errWg.Go(func() error {
 		log.Info("Server running", "address", *addr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("the server failed with error: %w", err)
 		}
 		return nil
@@ -93,13 +82,33 @@ func run(args []string, log *slog.Logger) error {
 	errWg.Go(func() error {
 		<-errCtx.Done()
 		// https://gist.github.com/s8508235/bc248d046d5001d5cae46cc39066cdf5?permalink_comment_id=4360249#gistcomment-4360249
-		return srv.Shutdown(context.Background())
+		if err := srv.Shutdown(context.Background()); err != nil { //nolint:contextcheck
+			return fmt.Errorf("could not shutdown server gracefully: %w", err)
+		}
+		return nil
 	})
 
 	err := errWg.Wait()
-	if err == context.Canceled || err == nil {
-		fmt.Println("gracefully quit server")
-		return nil
+	if !errors.Is(err, context.Canceled) && err != nil {
+		return fmt.Errorf("server error: %w", err)
 	}
-	return err
+	s.log.Info("server quit gracefully")
+	return nil
+}
+
+func newServer(log *slog.Logger) *server {
+	db := make(map[string]string)
+	httpRequestsTotal := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "http_requests_total",
+		Help: "Count of all HTTP requests",
+	})
+	s := &server{
+		log: log,
+		db: &database{
+			db: db,
+		},
+		mux:                  http.NewServeMux(),
+		requestCounterMetric: httpRequestsTotal,
+	}
+	return s
 }
