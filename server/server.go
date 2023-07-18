@@ -66,12 +66,6 @@ func (s *server) handleGet(w http.ResponseWriter, key string) {
 		log.Println("Error writing response:", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
-	ss := []struct {
-		name *http.Server
-	}{
-		{name: &http.Server{ReadHeaderTimeout: ti}},
-	}
-	_ = ss
 }
 
 // according to rfc guidelines PUT should create or replace resources
@@ -91,23 +85,22 @@ func (s *server) handlePut(w http.ResponseWriter, r *http.Request, key string) {
 	case errors.As(err, &keyErr):
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		_, err = w.Write([]byte(err.Error()))
-		if err != nil {
-			log.Println(err)
-		}
+		log.Println(err)
 		return
 	case errors.As(err, &valueErr):
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		_, err = w.Write([]byte(err.Error()))
-		if err != nil {
-			log.Println(err)
-		}
+		log.Println(err)
 		return
 	case errors.As(err, &dbErr):
 		w.WriteHeader(http.StatusInsufficientStorage)
 		_, err = w.Write([]byte(err.Error()))
-		if err != nil {
-			log.Println(err)
-		}
+		log.Println(err)
+		return
+	case err != nil:
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err = w.Write([]byte(err.Error()))
+		log.Println(err)
 		return
 	}
 	if code == http.StatusCreated {
