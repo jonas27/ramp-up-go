@@ -74,6 +74,8 @@ func (e *DatabaseError) Error() string {
 }
 
 func (db *database) put(key string, value string) (int, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	if len(key) >= maxKeyLen {
 		return 0, &KeyError{maxLen: maxKeyLen}
 	}
@@ -83,8 +85,6 @@ func (db *database) put(key string, value string) (int, error) {
 	if len(db.db) >= maxDatabaseLength {
 		return 0, &DatabaseError{maxLen: maxDatabaseLength}
 	}
-	db.mu.Lock()
-	defer db.mu.Unlock()
 	_, ok := db.db[key]
 	db.db[key] = value
 	if !ok {
@@ -94,9 +94,11 @@ func (db *database) put(key string, value string) (int, error) {
 }
 
 func (db *database) persist() error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	jsonDB, err := json.Marshal(&db)
 	if err != nil {
 		return fmt.Errorf("failed to marshal json: %w", err)
 	}
-	return os.WriteFile("database.json", jsonDB, filePerm) //nolint
+	return fmt.Errorf("can't write to file: %w", os.WriteFile("database.json", jsonDB, filePerm))
 }
