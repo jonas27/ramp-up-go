@@ -3,6 +3,7 @@ branches:
   - main
 preset: "angular"
 tagFormat: "${version}"
+repositoryUrl: "https://github.com/jonas27/ramp-up-go"
 plugins:
   - "@semantic-release/commit-analyzer"
   - "@semantic-release/release-notes-generator"
