@@ -1,7 +1,7 @@
 ---
 branches: 
   - main
-preset: "angular"
+preset: conventional-commits
 tagFormat: "${version}"
 repositoryUrl: "https://github.com/jonas27/ramp-up-go"
 plugins:
