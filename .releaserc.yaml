@@ -1,18 +1,16 @@
 ---
 branches: 
   - main
-preset: conventional-commits
+preset: "angular"
 tagFormat: "${version}"
 repositoryUrl: "https://github.com/jonas27/ramp-up-go"
 plugins:
   - "@semantic-release/commit-analyzer"
   - "@semantic-release/release-notes-generator"
   - "@semantic-release/changelog"
-  - "@semantic-release/git"
   - "@semantic-release/github"
 
 verifyConditions:
-  - '@semantic-release/git'
   - "@semantic-release/github"
 analyzeCommits:
   - path: "@semantic-release/commit-analyzer"
